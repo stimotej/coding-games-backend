@@ -5,13 +5,25 @@ const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 5000;
 
 // Gzip compression
 app.use(compression());
 
+// Cors options
+var whitelist = ["https://coding-games.vercel.app", "http://localhost:3000"];
+var corsOptions = {
+  optionsSuccessStatus: 200,
+  origin: function (origin, callback) {
+    if (whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+};
 // CORS
-app.use(cors());
+app.use(cors(corsOptions));
 
 // Parse body to JSON
 app.use(express.urlencoded({ extended: true }));
@@ -26,13 +38,18 @@ app.use("/api/games/css", cssRoute);
 app.use("/api/auth", authRoute);
 
 // Connect to MongoDB
-mongoose.connect(
-  process.env.DB_CONNECTION,
-  { useNewUrlParser: true, useUnifiedTopology: true },
-  () => {
-    console.log("Connected to MonogoDB");
-  }
-);
+mongoose
+  .connect(process.env.DB_CONNECTION, {
+    useNewUrlParser: true,
+    useCreateIndex: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => {
+    console.log("Connected to database ");
+  })
+  .catch((err) => {
+    console.error(`Error connecting to the database. \n${err}`);
+  });
 
 // Listen server on port
 app.listen(port, () => {

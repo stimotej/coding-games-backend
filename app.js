@@ -5,7 +5,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 3000;
 
 // Gzip compression
 app.use(compression());
@@ -36,5 +36,5 @@ mongoose.connect(
 
 // Listen server on port
 app.listen(port, () => {
-  console.log(`Listening at http://localhost:${port}`);
+  console.log(`Server is running...`);
 });

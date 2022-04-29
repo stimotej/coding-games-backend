@@ -14,13 +14,13 @@ app.use(compression());
 var whitelist = ["https://coding-games.vercel.app", "http://localhost:3000"];
 var corsOptions = {
   optionsSuccessStatus: 200,
-  origin: function (origin, callback) {
-    if (whitelist.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
+  // origin: function (origin, callback) {
+  //   if (whitelist.indexOf(origin) !== -1) {
+  //     callback(null, true);
+  //   } else {
+  //     callback(new Error("Not allowed by CORS"));
+  //   }
+  // },
 };
 // CORS
 app.use(cors(corsOptions));
@@ -31,10 +31,12 @@ app.use(express.json());
 
 // Setup Routes
 const cssRoute = require("./routes/css");
+const gamesRoute = require("./routes/games");
 const authRoute = require("./routes/auth");
 
 // Middleware functions for routes
-app.use("/api/games/css", cssRoute);
+app.use("/api/css", cssRoute);
+app.use("/api/games", gamesRoute);
 app.use("/api/auth", authRoute);
 
 // Connect to MongoDB

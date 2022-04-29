@@ -24,6 +24,15 @@ const userSchema = mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  rank: {
+    type: String,
+    enum: ["Begginer", "Junior", "Mid", "Senior"],
+    default: "Begginer",
+  },
+  progressCss: {
+    type: Number,
+    default: 0,
+  },
 });
 
 // Export model with created schema

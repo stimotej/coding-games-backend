@@ -8,7 +8,7 @@ module.exports = async (req, res, next) => {
   const user = await User.findById(userId);
 
   // If user is not admin return 403
-  if (user.role !== "Admin") return res.status(403).send("Access Denied");
+  if (user?.role !== "Admin") return res.status(403).send("Access Denied");
 
   next();
 };

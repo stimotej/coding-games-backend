@@ -1,15 +1,11 @@
 const mongoose = require("mongoose");
 
 // Game MongoDB schema
-const gameSchema = mongoose.Schema({
+const cssSchema = mongoose.Schema({
   level: {
     type: Number,
     required: true,
     default: 1,
-  },
-  name: {
-    type: String,
-    required: true,
   },
   codeHtml: String,
   codeCss: [
@@ -22,4 +18,4 @@ const gameSchema = mongoose.Schema({
 });
 
 // Export model with created schema
-module.exports = mongoose.model("Games", gameSchema);
+module.exports = mongoose.model("Css", cssSchema);

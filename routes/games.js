@@ -1,8 +1,14 @@
 const express = require("express");
 const Game = require("../models/Game");
+const User = require("../models/User");
 const verifyToken = require("./verifyToken");
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
 
 const router = express.Router();
+
+const upload = multer({ dest: "uploads/" });
 
 // Get all games
 router.get("/", async (req, res) => {
@@ -11,6 +17,23 @@ router.get("/", async (req, res) => {
       .populate("createdBy")
       .populate("played.user");
     res.json(games);
+  } catch (err) {
+    res.json({ message: err });
+  }
+});
+
+// Get all games
+router.get("/leaderboard", async (req, res) => {
+  try {
+    const users = await User.find({}).sort({ score: "desc" }).limit(5);
+    res.json(
+      users.map((user) => ({
+        _id: user._id,
+        score: user.score,
+        username: user.username,
+        name: user.name,
+      }))
+    );
   } catch (err) {
     res.json({ message: err });
   }
@@ -28,14 +51,17 @@ router.get("/:gameId", async (req, res) => {
   }
 });
 
-// Create game - if logged in - if admin
-router.post("/", verifyToken, async (req, res) => {
+// Create game - if logged in
+router.post("/", upload.single("image"), verifyToken, async (req, res) => {
   const game = new Game({
     name: req.body.name,
-    codeHtml: req.body.codeHtml,
-    codeCss: req.body.codeCss,
-    colors: req.body.colors,
+    code: req.body.code,
+    colors: JSON.parse(req.body.colors),
     createdBy: req.user._id,
+    solutionImage: {
+      data: fs.readFileSync(path.join("uploads/" + req.file?.filename)),
+      contentType: "image/png",
+    },
   });
 
   try {
@@ -72,8 +98,7 @@ router.patch("/:gameId", verifyToken, async (req, res) => {
         {
           $set: {
             name: req.body.name,
-            codeHtml: req.body.codeHtml,
-            codeCss: req.body.codeCss,
+            code: req.body.code,
             colors: req.body.colors,
           },
         }

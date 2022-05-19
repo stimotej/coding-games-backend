@@ -8,7 +8,9 @@ const verifyToken = require("./verifyToken");
 // Get list of users - if logged in
 router.get("/", verifyToken, async (req, res) => {
   try {
-    const users = await User.find();
+    const users = await User.find(
+      req.query.role ? { role: req.query.role } : {}
+    );
     res.json(users);
   } catch (err) {
     res.json({ message: err });

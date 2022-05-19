@@ -6,13 +6,11 @@ const gameSchema = mongoose.Schema({
     type: String,
     required: true,
   },
-  codeHtml: String,
-  codeCss: [
-    {
-      className: String,
-      code: String,
-    },
-  ],
+  code: String,
+  solutionImage: {
+    data: Buffer,
+    contentType: String,
+  },
   colors: [String],
   played: [
     {

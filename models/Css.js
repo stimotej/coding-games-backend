@@ -7,13 +7,11 @@ const cssSchema = mongoose.Schema({
     required: true,
     default: 1,
   },
-  codeHtml: String,
-  codeCss: [
-    {
-      className: String,
-      code: String,
-    },
-  ],
+  code: String,
+  solutionImage: {
+    data: Buffer,
+    contentType: String,
+  },
   colors: [String],
 });
 

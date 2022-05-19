@@ -31,8 +31,18 @@ const userSchema = mongoose.Schema({
   },
   progressCss: {
     type: Number,
+    default: 1,
+  },
+  score: {
+    type: Number,
     default: 0,
   },
+  played: [
+    {
+      gameId: String,
+      highestScore: Number,
+    },
+  ],
 });
 
 // Export model with created schema

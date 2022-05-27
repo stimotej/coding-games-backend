@@ -3,13 +3,10 @@ const Css = require("../models/Css");
 const User = require("../models/User");
 const verifyAdmin = require("./verifyAdmin");
 const verifyToken = require("./verifyToken");
-const multer = require("multer");
+const { upload } = require("../s3");
 const fs = require("fs");
-const path = require("path");
 
 const router = express.Router();
-
-const upload = multer({ dest: "uploads/" });
 
 // Get all levels
 router.get("/", async (req, res) => {
@@ -42,15 +39,14 @@ router.post(
   async (req, res) => {
     const levels = await Css.find();
 
+    console.log("File: ", req.file);
+
     const level = new Css({
       name: req.body.name,
       code: req.body.code,
       colors: JSON.parse(req.body.colors),
       level: levels.length + 1,
-      solutionImage: {
-        data: fs.readFileSync(path.join("uploads/" + req.file?.filename)),
-        contentType: "image/png",
-      },
+      solutionImage: req.file.location,
     });
 
     try {
@@ -91,24 +87,46 @@ router.patch("/:levelId", verifyToken, verifyAdmin, async (req, res) => {
   }
 });
 
-// Submit level - if logged in
-router.post("/:levelId/submit", verifyToken, async (req, res) => {
-  try {
-    const level = await Css.findById(req.params.levelId);
+const Jimp = require("jimp");
+var multer = require("multer");
+var uploadd = multer();
 
-    if (level.code.replace(/\s/g, "") === req.body.code.replace(/\s/g, "")) {
+// Submit level - if logged in
+router.post(
+  "/:levelId/submit",
+  uploadd.single("image"),
+  verifyToken,
+  async (req, res) => {
+    try {
       const user = await User.findById(req.user?._id);
+      const level = await Css.findById(req.params.levelId);
+
+      const solutionImage = await Jimp.read(level.solutionImage);
+      const submitedImage = await Jimp.read(req.file.buffer);
+
+      const imageDifference = Jimp.diff(submitedImage, solutionImage).percent;
+      const codeLength = req.body.code.length;
+      const totalScore = Number(
+        (codeLength / (imageDifference <= 0 ? 0.01 : imageDifference)).toFixed(
+          2
+        )
+      );
+
+      var highestScore = totalScore;
 
       const playedGame = user.played.find(
         (game) => game.gameId === level._id.toString()
       );
 
-      if (typeof playedGame !== undefined) {
-        if (250 > playedGame.highestScore) playedGame.highestScore = 250;
+      if (typeof playedGame !== "undefined") {
+        if (totalScore > playedGame.highestScore)
+          playedGame.highestScore = totalScore;
+        else highestScore = playedGame.highestScore;
       } else {
+        console.log("ff");
         user.played.push({
           gameId: level._id,
-          highestScore: 250,
+          highestScore: totalScore,
         });
       }
 
@@ -120,24 +138,23 @@ router.post("/:levelId/submit", verifyToken, async (req, res) => {
         0
       );
 
-      // REPLACE 250 WITH SCORE SYSTEM
-
       await user.save();
 
       res.json({
         success: 1,
         message: "Level passed",
         data: {
-          score: 250,
-          highestScore: playedGame.highestScore,
+          score: totalScore,
+          codeLength,
+          imageDifference,
+          highestScore,
         },
+        user,
       });
-    } else {
-      res.json({ success: 0, message: "Wrong answer" });
+    } catch (err) {
+      res.json({ message: err });
     }
-  } catch (err) {
-    res.json({ message: err });
   }
-});
+);
 
 module.exports = router;

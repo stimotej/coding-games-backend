@@ -2,13 +2,9 @@ const express = require("express");
 const Game = require("../models/Game");
 const User = require("../models/User");
 const verifyToken = require("./verifyToken");
-const multer = require("multer");
-const fs = require("fs");
-const path = require("path");
+const { upload } = require("../s3");
 
 const router = express.Router();
-
-const upload = multer({ dest: "uploads/" });
 
 // Get all games
 router.get("/", async (req, res) => {
@@ -53,15 +49,13 @@ router.get("/:gameId", async (req, res) => {
 
 // Create game - if logged in
 router.post("/", upload.single("image"), verifyToken, async (req, res) => {
+  console.log("File: ", req.file);
   const game = new Game({
     name: req.body.name,
     code: req.body.code,
     colors: JSON.parse(req.body.colors),
     createdBy: req.user._id,
-    solutionImage: {
-      data: fs.readFileSync(path.join("uploads/" + req.file?.filename)),
-      contentType: "image/png",
-    },
+    solutionImage: req.file.location,
   });
 
   try {

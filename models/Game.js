@@ -7,10 +7,7 @@ const gameSchema = mongoose.Schema({
     required: true,
   },
   code: String,
-  solutionImage: {
-    data: Buffer,
-    contentType: String,
-  },
+  solutionImage: String,
   colors: [String],
   played: [
     {

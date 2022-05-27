@@ -8,10 +8,7 @@ const cssSchema = mongoose.Schema({
     default: 1,
   },
   code: String,
-  solutionImage: {
-    data: Buffer,
-    contentType: String,
-  },
+  solutionImage: String,
   colors: [String],
 });
 

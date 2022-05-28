@@ -4,7 +4,6 @@ const User = require("../models/User");
 const verifyAdmin = require("./verifyAdmin");
 const verifyToken = require("./verifyToken");
 const { upload } = require("../s3");
-const fs = require("fs");
 
 const router = express.Router();
 
@@ -34,7 +33,7 @@ router.get("/:levelId", async (req, res) => {
 router.post(
   "/",
   upload.single("image"),
-  verifyToken,
+  verifyToken(),
   verifyAdmin,
   async (req, res) => {
     const levels = await Css.find();
@@ -59,7 +58,7 @@ router.post(
 );
 
 // Delete level - if logged in
-router.delete("/:levelId", verifyToken, verifyAdmin, async (req, res) => {
+router.delete("/:levelId", verifyToken(), verifyAdmin, async (req, res) => {
   try {
     const removedLevel = await Css.deleteOne({ _id: req.params.levelId });
     res.json(removedLevel);
@@ -69,7 +68,7 @@ router.delete("/:levelId", verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // Update level - if logged in
-router.patch("/:levelId", verifyToken, verifyAdmin, async (req, res) => {
+router.patch("/:levelId", verifyToken(), verifyAdmin, async (req, res) => {
   try {
     const updatedLevel = await Css.updateOne(
       { _id: req.params.levelId },
@@ -95,10 +94,9 @@ var uploadd = multer();
 router.post(
   "/:levelId/submit",
   uploadd.single("image"),
-  verifyToken,
+  verifyToken(true),
   async (req, res) => {
     try {
-      const user = await User.findById(req.user?._id);
       const level = await Css.findById(req.params.levelId);
 
       const solutionImage = await Jimp.read(level.solutionImage);
@@ -112,45 +110,60 @@ router.post(
         )
       );
 
-      var highestScore = totalScore;
+      if (req.user) {
+        const user = await User.findById(req.user?._id);
 
-      const playedGame = user.played.find(
-        (game) => game.gameId === level._id.toString()
-      );
+        var highestScore = totalScore;
 
-      if (typeof playedGame !== "undefined") {
-        if (totalScore > playedGame.highestScore)
-          playedGame.highestScore = totalScore;
-        else highestScore = playedGame.highestScore;
+        const playedGame = user.played.find(
+          (game) => game.gameId === level._id.toString()
+        );
+
+        if (typeof playedGame !== "undefined") {
+          if (totalScore > playedGame.highestScore)
+            playedGame.highestScore = totalScore;
+          else highestScore = playedGame.highestScore;
+        } else {
+          user.played.push({
+            gameId: level._id,
+            highestScore: totalScore,
+          });
+        }
+
+        if (imageDifference <= 0) {
+          user.levelsPassed =
+            user.levelsPassed < level.level ? level.level : user.levelsPassed;
+
+          user.score = user.played.reduce(
+            (partialSum, game) => partialSum + game.highestScore,
+            0
+          );
+        }
+
+        await user.save();
+
+        res.json({
+          success: 1,
+          message: "Level passed",
+          data: {
+            score: totalScore,
+            codeLength,
+            imageDifference,
+            highestScore,
+          },
+          user,
+        });
       } else {
-        console.log("ff");
-        user.played.push({
-          gameId: level._id,
-          highestScore: totalScore,
+        res.json({
+          success: 1,
+          message: "Level passed",
+          data: {
+            score: totalScore,
+            codeLength,
+            imageDifference,
+          },
         });
       }
-
-      user.progressCss =
-        user.progressCss <= level.level ? level.level + 1 : user.progressCss;
-
-      user.score = user.played.reduce(
-        (partialSum, game) => partialSum + game.highestScore,
-        0
-      );
-
-      await user.save();
-
-      res.json({
-        success: 1,
-        message: "Level passed",
-        data: {
-          score: totalScore,
-          codeLength,
-          imageDifference,
-          highestScore,
-        },
-        user,
-      });
     } catch (err) {
       res.json({ message: err });
     }

@@ -4,9 +4,10 @@ var bcrypt = require("bcryptjs");
 var jwt = require("jsonwebtoken");
 const { registerValidation, loginValidation } = require("../validation");
 const verifyToken = require("./verifyToken");
+const { upload } = require("../s3");
 
 // Get list of users - if logged in
-router.get("/", verifyToken, async (req, res) => {
+router.get("/", verifyToken(), async (req, res) => {
   try {
     const users = await User.find(
       req.query.role ? { role: req.query.role } : {}
@@ -18,7 +19,7 @@ router.get("/", verifyToken, async (req, res) => {
 });
 
 // Get logged in user
-router.get("/profile", verifyToken, async (req, res) => {
+router.get("/profile", verifyToken(), async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     res.json(user);
@@ -27,8 +28,44 @@ router.get("/profile", verifyToken, async (req, res) => {
   }
 });
 
+// Update logged in user
+router.patch(
+  "/profile",
+  upload.single("image"),
+  verifyToken(),
+  async (req, res) => {
+    var newUserData = {};
+
+    if (req.body.username) newUserData.username = req.body.username;
+    if (req.body.name) newUserData.name = req.body.name;
+    if (req.body.email) newUserData.email = req.body.email;
+    if (req.body.password) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(req.body.password, salt);
+
+      newUserData.password = hashedPassword;
+    }
+    if (req.file) {
+      newUserData.image = req.file.location;
+    }
+
+    try {
+      const updatedUser = await User.findByIdAndUpdate(
+        { _id: req.user._id },
+        {
+          $set: newUserData,
+        },
+        { new: true }
+      );
+      res.json(updatedUser);
+    } catch (err) {
+      res.json({ message: err });
+    }
+  }
+);
+
 // Get single user by id - if logged in
-router.get("/:userId", verifyToken, async (req, res) => {
+router.get("/:userId", verifyToken(), async (req, res) => {
   try {
     const user = await User.findById(req.params.userId);
     res.json(user);
@@ -89,7 +126,7 @@ router.post("/login", async (req, res) => {
 });
 
 // UPDATE USER - if logged in
-router.patch("/:userId", verifyToken, async (req, res) => {
+router.patch("/:userId", verifyToken(), async (req, res) => {
   // Validate register data
   const { error } = registerValidation(req.body);
   if (error) return res.status(400).send(error.details[0].message);
@@ -122,7 +159,7 @@ router.patch("/:userId", verifyToken, async (req, res) => {
 });
 
 // Delete user - if logged in
-router.delete("/:userId", verifyToken, async (req, res) => {
+router.delete("/:userId", verifyToken(), async (req, res) => {
   try {
     const removedUser = await User.remove({ _id: req.params.userId });
     res.json(removedUser);

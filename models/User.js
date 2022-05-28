@@ -5,6 +5,7 @@ const userSchema = mongoose.Schema({
   name: {
     type: String,
   },
+  image: String,
   role: {
     type: String,
     default: "User",
@@ -29,7 +30,7 @@ const userSchema = mongoose.Schema({
     enum: ["Begginer", "Junior", "Mid", "Senior"],
     default: "Begginer",
   },
-  progressCss: {
+  levelsPassed: {
     type: Number,
     default: 1,
   },

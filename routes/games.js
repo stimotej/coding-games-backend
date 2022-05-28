@@ -28,6 +28,7 @@ router.get("/leaderboard", async (req, res) => {
         score: user.score,
         username: user.username,
         name: user.name,
+        image: user.image,
       }))
     );
   } catch (err) {
@@ -48,7 +49,7 @@ router.get("/:gameId", async (req, res) => {
 });
 
 // Create game - if logged in
-router.post("/", upload.single("image"), verifyToken, async (req, res) => {
+router.post("/", upload.single("image"), verifyToken(), async (req, res) => {
   console.log("File: ", req.file);
   const game = new Game({
     name: req.body.name,
@@ -68,7 +69,7 @@ router.post("/", upload.single("image"), verifyToken, async (req, res) => {
 });
 
 // Delete game - if logged in
-router.delete("/:gameId", verifyToken, async (req, res) => {
+router.delete("/:gameId", verifyToken(), async (req, res) => {
   try {
     const game = await Game.findById(req.params.gameId);
     if (game.createdBy === req.user._id) {
@@ -83,7 +84,7 @@ router.delete("/:gameId", verifyToken, async (req, res) => {
 });
 
 // Update game - if logged in
-router.patch("/:gameId", verifyToken, async (req, res) => {
+router.patch("/:gameId", verifyToken(), async (req, res) => {
   try {
     const game = await Game.findById(req.params.gameId);
     if (game.createdBy.toString() === req.user._id) {
@@ -107,7 +108,7 @@ router.patch("/:gameId", verifyToken, async (req, res) => {
 });
 
 // Add user and score when played - if logged in
-router.post("/:gameId/score", verifyToken, async (req, res) => {
+router.post("/:gameId/score", verifyToken(), async (req, res) => {
   try {
     const game = await Game.findById(req.params.gameId)
       .populate("createdBy")
@@ -126,7 +127,7 @@ router.post("/:gameId/score", verifyToken, async (req, res) => {
 });
 
 // Add review - if logged in
-router.post("/:gameId/review", verifyToken, async (req, res) => {
+router.post("/:gameId/review", verifyToken(), async (req, res) => {
   try {
     const game = await Game.findById(req.params.gameId)
       .populate("createdBy")

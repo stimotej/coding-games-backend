@@ -9,7 +9,21 @@ const router = express.Router();
 // Get all games
 router.get("/", async (req, res) => {
   try {
-    const games = await Game.find()
+    const games = await Game.find(
+      req.query.createdBy ? { createdBy: req.query.createdBy } : {}
+    )
+      .populate("createdBy")
+      .populate("played.user");
+    res.json(games);
+  } catch (err) {
+    res.json({ message: err });
+  }
+});
+
+// Get all games created by logged in user
+router.get("/my-games", verifyToken(), async (req, res) => {
+  try {
+    const games = await Game.find({ createdBy: req.user._id })
       .populate("createdBy")
       .populate("played.user");
     res.json(games);
@@ -72,7 +86,7 @@ router.post("/", upload.single("image"), verifyToken(), async (req, res) => {
 router.delete("/:gameId", verifyToken(), async (req, res) => {
   try {
     const game = await Game.findById(req.params.gameId);
-    if (game.createdBy === req.user._id) {
+    if (game.createdBy.toString() === req.user._id) {
       const removedGame = await Game.deleteOne({ _id: req.params.gameId });
       res.json(removedGame);
     } else {
@@ -140,5 +154,84 @@ router.post("/:gameId/review", verifyToken(), async (req, res) => {
     res.json({ message: err });
   }
 });
+
+const Jimp = require("jimp");
+var multer = require("multer");
+var uploadd = multer();
+
+router.post(
+  "/:gameId/submit",
+  uploadd.single("image"),
+  verifyToken(true),
+  async (req, res) => {
+    try {
+      const game = await Game.findById(req.params.gameId);
+
+      const solutionImage = await Jimp.read(game.solutionImage);
+      const submitedImage = await Jimp.read(req.file.buffer);
+
+      const imageDifference = Jimp.diff(submitedImage, solutionImage).percent;
+      const codeLength = req.body.code.length;
+      const totalScore = Number(
+        (codeLength / (imageDifference <= 0 ? 0.01 : imageDifference)).toFixed(
+          2
+        )
+      );
+
+      if (req.user) {
+        const user = await User.findById(req.user?._id);
+
+        var highestScore = totalScore;
+
+        const playedGame = user.played.find(
+          (item) => item.game.toString() === game._id.toString()
+        );
+
+        if (typeof playedGame !== "undefined") {
+          if (totalScore > playedGame.highestScore)
+            playedGame.highestScore = totalScore;
+          else highestScore = playedGame.highestScore;
+        } else {
+          user.played.push({
+            game: game._id,
+            highestScore: totalScore,
+            isLevel: false,
+          });
+        }
+
+        user.score = user.played.reduce(
+          (partialSum, game) => partialSum + game.highestScore,
+          0
+        );
+
+        await user.save();
+
+        res.json({
+          success: 1,
+          message: "Game finished",
+          data: {
+            score: totalScore,
+            codeLength,
+            imageDifference,
+            highestScore,
+          },
+          user,
+        });
+      } else {
+        res.json({
+          success: 1,
+          message: "Game finished",
+          data: {
+            score: totalScore,
+            codeLength,
+            imageDifference,
+          },
+        });
+      }
+    } catch (err) {
+      res.json({ message: err });
+    }
+  }
+);
 
 module.exports = router;

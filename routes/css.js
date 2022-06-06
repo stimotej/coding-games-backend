@@ -116,7 +116,7 @@ router.post(
         var highestScore = totalScore;
 
         const playedGame = user.played.find(
-          (game) => game.gameId === level._id.toString()
+          (game) => game.game.toString() === level._id.toString()
         );
 
         if (typeof playedGame !== "undefined") {
@@ -125,19 +125,15 @@ router.post(
           else highestScore = playedGame.highestScore;
         } else {
           user.played.push({
-            gameId: level._id,
+            game: level._id,
             highestScore: totalScore,
+            isLevel: true,
           });
         }
 
         if (imageDifference <= 0) {
           user.levelsPassed =
             user.levelsPassed < level.level ? level.level : user.levelsPassed;
-
-          user.score = user.played.reduce(
-            (partialSum, game) => partialSum + game.highestScore,
-            0
-          );
         }
 
         await user.save();

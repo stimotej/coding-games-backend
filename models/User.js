@@ -40,7 +40,10 @@ const userSchema = mongoose.Schema({
   },
   played: [
     {
-      gameId: String,
+      game: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Games",
+      },
       highestScore: Number,
     },
   ],

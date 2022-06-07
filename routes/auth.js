@@ -162,7 +162,9 @@ router.post("/register", async (req, res) => {
   // Save user to MongoDB
   try {
     const savedUser = await user.save();
-    res.json(savedUser);
+
+    const token = jwt.sign({ _id: savedUser._id }, process.env.TOKEN_SECRET);
+    res.header("auth-token", token).send(token);
   } catch (err) {
     res.json({ message: err });
   }
